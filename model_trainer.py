@@ -19,12 +19,15 @@ class BertTextPairClassifier:
         self.output_dir = output_dir
         self.max_len = max_len
 
-    def train(self, train_dataloader, epochs):
+    def train(self, train_dataloader, epochs, val_dataloader=None):
         """
-        Trains the BERT model using the provided DataLoader.
+        Trains the BERT model using the provided DataLoader, evaluates on validation set after each epoch.
         """
         self.model.train()
         print(f"\nStarting BERT model training on {self.device}...")
+        best_val_acc = 0.0
+        best_val_loss = float('inf')
+        best_epoch = -1
         for epoch in range(epochs):
             total_loss = 0
             progress_bar = tqdm(train_dataloader, desc=f"Epoch {epoch+1}/{epochs} Training")
@@ -54,7 +57,20 @@ class BertTextPairClassifier:
             avg_train_loss = total_loss / len(train_dataloader)
             print(f"\nEpoch {epoch+1} - Average Training Loss: {avg_train_loss:.4f}")
 
+            # Validation after each epoch
+            if val_dataloader is not None:
+                val_acc, val_loss = self.evaluate(val_dataloader, epoch_num=epoch+1)
+                if val_acc is not None and val_acc > best_val_acc:
+                    best_val_acc = val_acc
+                    best_val_loss = val_loss
+                    best_epoch = epoch+1
+                    # Optionally save best model here
+                    # self.save_model()
+                print(f"Best Validation Accuracy so far: {best_val_acc:.4f} (Epoch {best_epoch})")
+
         print("Training complete.")
+        if best_epoch > 0:
+            print(f"Best Validation Accuracy: {best_val_acc:.4f} at Epoch {best_epoch}")
 
     def evaluate(self, dataloader, epoch_num=0):
         """
